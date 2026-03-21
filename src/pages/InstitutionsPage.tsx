@@ -15,8 +15,8 @@ export const InstitutionsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-14">
-        <div className="w-12 h-12 border-4 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -25,63 +25,45 @@ export const InstitutionsPage: React.FC = () => {
   const maxCount = institutionStats[0]?.[1] || 1;
 
   return (
-    <div className="pt-14">
-      <section className="hero-gradient py-20 px-6">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="eyebrow mb-4">数据分析</p>
-          <h1 className="headline-xl mb-6">研究机构</h1>
-          <p className="text-[17px] text-[#86868b] max-w-2xl mx-auto">
-            追踪全球研究机构的撤稿历史和趋势
-          </p>
-        </div>
-      </section>
-
-      <section className="py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-3 gap-8 text-center mb-16">
+    <div className="min-h-screen bg-white">
+      <header className="bg-slate-900 text-white">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🏛</span>
             <div>
-              <div className="stat-number text-[#1d1d1f]">{institutionStats.length}</div>
-              <p className="text-[15px] text-[#86868b]">研究机构</p>
-            </div>
-            <div>
-              <div className="stat-number text-[#1d1d1f]">{records.length.toLocaleString()}</div>
-              <p className="text-[15px] text-[#86868b]">总撤稿数</p>
-            </div>
-            <div>
-              <div className="stat-number text-[#0071e3]">{Math.round(records.length / institutionStats.length)}</div>
-              <p className="text-[15px] text-[#86868b]">每机构平均</p>
+              <div className="text-xl font-bold">研究机构</div>
+              <div className="text-xs text-slate-400">共 {institutionStats.length} 家机构</div>
             </div>
           </div>
+        </div>
+      </header>
 
-          <div className="space-y-4">
-            {institutionStats.slice(0, 50).map(([institution, count], i) => {
-              const percentage = (count / maxCount) * 100;
-              return (
-                <div
-                  key={institution}
-                  className="bg-[#f5f5f7] rounded-2xl p-6"
-                >
-                  <div className="flex items-center gap-6 mb-3">
-                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-[18px] font-semibold text-[#86868b]">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[17px] font-semibold">{institution}</div>
-                    </div>
-                    <div className="text-[28px] font-semibold text-[#0071e3]">{count}</div>
-                  </div>
-                  <div className="h-2 bg-[#e8e8ed] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#0071e3] rounded-full"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <div className="space-y-2">
+          {institutionStats.slice(0, 50).map(([institution, count], i) => {
+            const percentage = (count / maxCount) * 100;
+            return (
+              <div
+                key={institution}
+                className="flex items-center gap-4 bg-white border border-slate-200 rounded-lg p-4"
+              >
+                <span className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-sm font-bold text-slate-500">
+                  {i + 1}
+                </span>
+                <span className="flex-1 font-medium text-slate-900 truncate">{institution}</span>
+                <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
+                  <div 
+                    className="h-full bg-rose-500 rounded-full"
+                    style={{ width: `${percentage}%` }}
+                  />
                 </div>
-              );
-            })}
-          </div>
+                <span className="text-rose-500 font-bold text-lg">{count}</span>
+                <span className="text-slate-400">篇</span>
+              </div>
+            );
+          })}
         </div>
-      </section>
+      </main>
     </div>
   );
 };

@@ -17,8 +17,8 @@ export const JournalsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-14">
-        <div className="w-12 h-12 border-4 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -27,64 +27,46 @@ export const JournalsPage: React.FC = () => {
   const maxCount = journalStats[0]?.[1] || 1;
 
   return (
-    <div className="pt-14">
-      <section className="hero-gradient py-20 px-6">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="eyebrow mb-4">数据分析</p>
-          <h1 className="headline-xl mb-6">学术期刊</h1>
-          <p className="text-[17px] text-[#86868b] max-w-2xl mx-auto">
-            分析各学术期刊的撤稿情况和诚信记录
-          </p>
-        </div>
-      </section>
-
-      <section className="py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-3 gap-8 text-center mb-16">
+    <div className="min-h-screen bg-white">
+      <header className="bg-slate-900 text-white">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📚</span>
             <div>
-              <div className="stat-number text-[#1d1d1f]">{journalStats.length}</div>
-              <p className="text-[15px] text-[#86868b]">学术期刊</p>
-            </div>
-            <div>
-              <div className="stat-number text-[#1d1d1f]">{records.length.toLocaleString()}</div>
-              <p className="text-[15px] text-[#86868b]">总撤稿数</p>
-            </div>
-            <div>
-              <div className="stat-number text-[#0071e3]">{Math.round(records.length / journalStats.length)}</div>
-              <p className="text-[15px] text-[#86868b]">每刊平均撤稿</p>
+              <div className="text-xl font-bold">学术期刊</div>
+              <div className="text-xs text-slate-400">共 {journalStats.length} 种期刊</div>
             </div>
           </div>
-
-          <div className="space-y-4">
-            {journalStats.slice(0, 50).map(([journal, count], i) => {
-              const percentage = (count / maxCount) * 100;
-              return (
-                <Link
-                  key={journal}
-                  to={`/journal/${encodeURIComponent(journal)}`}
-                  className="block bg-[#f5f5f7] rounded-2xl p-6 hover:bg-[#e8e8ed] transition-colors"
-                >
-                  <div className="flex items-center gap-6">
-                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-[18px] font-semibold text-[#86868b]">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[21px] font-semibold mb-2">{journal}</div>
-                      <div className="h-2 bg-[#e8e8ed] rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-[#0071e3] rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-[28px] font-semibold text-[#0071e3]">{count.toLocaleString()}</div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
         </div>
-      </section>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <div className="space-y-2">
+          {journalStats.map(([journal, count], i) => {
+            const percentage = (count / maxCount) * 100;
+            return (
+              <Link
+                key={journal}
+                to={`/journal/${encodeURIComponent(journal)}`}
+                className="flex items-center gap-4 bg-white border border-slate-200 rounded-lg p-4 hover:border-rose-300 hover:shadow-sm transition-all"
+              >
+                <span className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-sm font-bold text-slate-500">
+                  {i + 1}
+                </span>
+                <span className="flex-1 font-medium text-slate-900 truncate">{journal}</span>
+                <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
+                  <div 
+                    className="h-full bg-rose-500 rounded-full"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+                <span className="text-rose-500 font-bold text-lg">{count.toLocaleString()}</span>
+                <span className="text-slate-400">篇</span>
+              </Link>
+            );
+          })}
+        </div>
+      </main>
     </div>
   );
 };
