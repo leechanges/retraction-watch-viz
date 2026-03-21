@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #060914;
-  --bg2: #0b1120;
-  --bg3: #0f1629;
-  --card: #101828;
-  --card2: #162035;
-  --border: #1e2d4a;
-  --border2: #253550;
-  --teal: #00D4AA;
-  --teal-dim: #00a882;
-  --crimson: #FF3B5C;
-  --text: #e2e8f0;
-  --text2: #94a3b8;
+  --bg: #f8fafc;
+  --bg2: #f1f5f9;
+  --bg3: #e2e8f0;
+  --card: #ffffff;
+  --card2: #f8fafc;
+  --border: #cbd5e1;
+  --border2: #94a3b8;
+  --teal: #0d9488;
+  --teal-dim: #0f766e;
+  --crimson: #dc2626;
+  --text: #1e293b;
+  --text2: #475569;
   --text3: #64748b;
 }
 
@@ -30,11 +30,11 @@ html, body, #root {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Figtree', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 13px;
   background-image: 
-    linear-gradient(rgba(0,212,170,.03) 1px, transparent 1px),
-    linear-gradient(90deg,rgba(0,212,170,.03) 1px, transparent 1px);
+    linear-gradient(rgba(13,148,136,0.03) 1px, transparent 1px),
+    linear-gradient(90deg,rgba(13,148,136,0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -51,4 +51,32 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--teal-dim);
+}
+
+/* Dropdown animations */
+.dropdown-enter {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.dropdown-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 150ms, transform 150ms;
+}
+.dropdown-exit {
+  opacity: 1;
+}
+.dropdown-exit-active {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 100ms, transform 100ms;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: all 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
 }
