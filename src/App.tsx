@@ -12,7 +12,7 @@ import { PublishersPage } from './pages/PublishersPage';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/retraction-watch-viz">
       <Navigation />
       <Routes>
         <Route path="/" element={<HomePage />} />
