@@ -24,13 +24,13 @@ function parseCSVLine(line: string): string[] {
     if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
+      result.push(current.trim().replace(/^"|"$/g, ''));
       current = '';
     } else {
       current += char;
     }
   }
-  result.push(current.trim());
+  result.push(current.trim().replace(/^"|"$/g, ''));
   return result;
 }
 
@@ -49,37 +49,91 @@ function parseMultiValue(str: string): string[] {
   return str.split(';').map(s => s.trim()).filter(Boolean);
 }
 
+// List of valid countries to filter noise
+const VALID_COUNTRIES = new Set([
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina', 
+  'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 
+  'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 
+  'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 
+  'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Central African Republic', 
+  'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Costa Rica', 
+  'Croatia', 'Cuba', 'Cyprus', 'Czech Republic', 'Denmark', 'Djibouti', 'Dominica', 
+  'Dominican Republic', 'East Timor', 'Ecuador', 'Egypt', 'El Salvador', 
+  'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 
+  'Finland', 'France', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 
+  'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana', 
+  'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran', 
+  'Iraq', 'Ireland', 'Israel', 'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 
+  'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 
+  'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 
+  'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 
+  'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 
+  'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 
+  'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 
+  'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 
+  'Norway', 'Oman', 'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 
+  'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar', 
+  'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 
+  'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 
+  'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 
+  'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 
+  'South Korea', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 
+  'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 
+  'Thailand', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 
+  'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 
+  'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan', 'Vanuatu', 
+  'Vatican', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe',
+  // Common variations
+  'USA', 'UK', 'UAE', 'PRC'
+]);
+
 export function parseCSV(csvContent: string): RetractionRecord[] {
   const lines = csvContent.split('\n').filter(line => line.trim());
   if (lines.length < 2) return [];
   
   const headers = parseCSVLine(lines[0]);
+  
+  // Find column indices
+  const colIndex: Record<string, number> = {};
+  headers.forEach((h, i) => {
+    colIndex[h] = i;
+  });
+  
   const records: RetractionRecord[] = [];
   
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
-    const row: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] || '';
-    });
     
-    const id = parseInt(row['Record ID']) || 0;
+    const getValue = (col: string): string => {
+      const idx = colIndex[col];
+      return idx !== undefined ? (values[idx] || '') : '';
+    };
+    
+    const id = parseInt(getValue('Record ID')) || 0;
     if (id === 0) continue;
+    
+    const country = getValue('Country').replace(/[;"]/g, '').trim();
+    
+    // Skip invalid country entries
+    if (country && !VALID_COUNTRIES.has(country) && country.length > 30) {
+      // Likely garbage data, skip
+      continue;
+    }
     
     records.push({
       id,
-      title: row['Title'] || '',
-      subjects: parseMultiValue(row['Subject']),
-      institution: row['Institution'] || '',
-      journal: row['Journal'] || '',
-      publisher: row['Publisher'] || '',
-      country: row['Country'] || '',
-      authors: parseMultiValue(row['Author']),
-      retractionDate: parseDate(row['RetractionDate']),
-      originalPaperDate: parseDate(row['OriginalPaperDate']),
-      retractionNature: row['RetractionNature'] || '',
-      reasons: parseMultiValue(row['Reason']),
-      paywalled: row['Paywalled'] === 'Yes',
+      title: getValue('Title') || '',
+      subjects: parseMultiValue(getValue('Subject')),
+      institution: getValue('Institution').replace(/[;"]/g, '').trim(),
+      journal: getValue('Journal') || '',
+      publisher: getValue('Publisher') || '',
+      country: country,
+      authors: parseMultiValue(getValue('Author')),
+      retractionDate: parseDate(getValue('RetractionDate')),
+      originalPaperDate: parseDate(getValue('OriginalPaperDate')),
+      retractionNature: getValue('RetractionNature') || '',
+      reasons: parseMultiValue(getValue('Reason')),
+      paywalled: getValue('Paywalled') === 'Yes',
     });
   }
   
@@ -89,7 +143,9 @@ export function parseCSV(csvContent: string): RetractionRecord[] {
 export function getCountryStats(records: RetractionRecord[]) {
   const map: Record<string, number> = {};
   records.forEach(r => {
-    if (r.country) map[r.country] = (map[r.country] || 0) + 1;
+    if (r.country && VALID_COUNTRIES.has(r.country)) {
+      map[r.country] = (map[r.country] || 0) + 1;
+    }
   });
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
