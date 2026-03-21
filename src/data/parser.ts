@@ -56,7 +56,7 @@ export function parseCSV(csvContent: string): RetractionRecord[] {
   const headers = parseCSVLine(lines[0]);
   const records: RetractionRecord[] = [];
   
-  for (let i = 1; i < Math.min(lines.length, 10000); i++) {
+  for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
     const row: Record<string, string> = {};
     headers.forEach((header, idx) => {
