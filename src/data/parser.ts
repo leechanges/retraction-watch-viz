@@ -143,9 +143,14 @@ export function parseCSV(csvContent: string): RetractionRecord[] {
 export function getCountryStats(records: RetractionRecord[]) {
   const map: Record<string, number> = {};
   records.forEach(r => {
-    if (r.country && VALID_COUNTRIES.has(r.country)) {
-      map[r.country] = (map[r.country] || 0) + 1;
-    }
+    if (!r.country) return;
+    // Split multi-country entries (e.g. "China;United States") and count each country
+    const countries = r.country.split(';').map(c => c.trim()).filter(c => c && c !== 'Unknown');
+    countries.forEach(c => {
+      if (VALID_COUNTRIES.has(c)) {
+        map[c] = (map[c] || 0) + 1;
+      }
+    });
   });
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
@@ -180,10 +185,18 @@ export function getReasonStats(records: RetractionRecord[]) {
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
 
+const NOISE_INSTITUTIONS = new Set([
+  'Unknown', 'unavailable', 'No affiliation available',
+  'N/A', 'None', 'NA', 'Pending', ' undisclosed'
+]);
+
 export function getInstitutionStats(records: RetractionRecord[]) {
   const map: Record<string, number> = {};
   records.forEach(r => {
-    if (r.institution) map[r.institution] = (map[r.institution] || 0) + 1;
+    if (!r.institution) return;
+    const inst = r.institution.trim();
+    if (!inst || NOISE_INSTITUTIONS.has(inst)) return;
+    map[inst] = (map[inst] || 0) + 1;
   });
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
