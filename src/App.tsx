@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Navigation } from './components/Navigation';
 import { HomePage } from './pages/HomePage';
 import { CountriesPage } from './pages/CountriesPage';
 import { CountryDetailPage } from './pages/CountryDetailPage';
@@ -13,7 +12,6 @@ import { PublishersPage } from './pages/PublishersPage';
 function App() {
   return (
     <BrowserRouter basename="/retraction-watch-viz">
-      <Navigation />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/countries" element={<CountriesPage />} />

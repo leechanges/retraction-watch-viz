@@ -12,13 +12,14 @@ export const Navigation: React.FC = () => {
     { label: '机构', path: '/institutions' },
     { label: '年份', path: '/years' },
     { label: '原因', path: '/reasons' },
+    { label: '出版商', path: '/publishers' },
   ];
 
   return (
-    <nav className="bg-slate-900 text-white sticky top-0 z-50">
+    <nav className="bg-white border-b border-slate-100 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center justify-between h-14">
-          <Link to="/" className="flex items-center gap-2 text-white">
+          <Link to="/" className="flex items-center gap-2 text-slate-900">
             <span className="text-xl">📊</span>
             <span className="font-bold">RetractionWatch</span>
           </Link>
@@ -31,8 +32,8 @@ export const Navigation: React.FC = () => {
                 to={item.path}
                 className={`text-sm transition-colors ${
                   location.pathname === item.path 
-                    ? 'text-rose-400' 
-                    : 'text-slate-300 hover:text-white'
+                    ? 'text-rose-500 font-medium' 
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {item.label}
@@ -42,7 +43,7 @@ export const Navigation: React.FC = () => {
 
           {/* Mobile Menu Button */}
           <button 
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-slate-600"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,12 +58,12 @@ export const Navigation: React.FC = () => {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="md:hidden border-t border-slate-700 py-3">
+          <div className="md:hidden border-t border-slate-100 py-3">
             {navItems.map(item => (
               <Link
                 key={item.path}
                 to={item.path}
-                className="block py-2 text-sm text-slate-300 hover:text-white"
+                className="block py-2 text-sm text-slate-600 hover:text-slate-900"
                 onClick={() => setMenuOpen(false)}
               >
                 {item.label}
