@@ -27,7 +27,7 @@ export const Navigation: React.FC = () => {
         scrolled ? 'bg-[rgba(255,255,255,0.8)] backdrop-blur-xl border-b border-[#d2d2d7]' : 'bg-transparent'
       }`}
     >
-      <nav className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <nav className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <span className="text-xl">📊</span>
           <span className="font-semibold text-[15px]">RetractionWatch</span>

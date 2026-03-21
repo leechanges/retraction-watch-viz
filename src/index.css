@@ -25,6 +25,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ensure all content is centered */
+#root {
+  min-height: 100vh;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
 }
