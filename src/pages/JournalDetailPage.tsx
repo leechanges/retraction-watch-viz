@@ -1,147 +1,130 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MOCK_DATA, getReasonStats, getYearStats } from '../data/mockData';
+import { loadData } from '../data/loader';
+import { getYearStats, getCountryStats } from '../data/parser';
+import type { RetractionRecord } from '../data/parser';
 
 export const JournalDetailPage: React.FC = () => {
   const { journal } = useParams<{ journal: string }>();
-  const decodedJournal = decodeURIComponent(journal || '');
+  const [records, setRecords] = useState<RetractionRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const journalData = useMemo(() => {
-    const records = MOCK_DATA.filter(d => d.journal === decodedJournal);
-    const reasonStats = getReasonStats(records);
-    const yearStats = getYearStats(records);
-    
-    const countryMap: Record<string, number> = {};
-    records.forEach(d => {
-      countryMap[d.country] = (countryMap[d.country] || 0) + 1;
+  useEffect(() => {
+    loadData().then(data => {
+      setRecords(data);
+      setLoading(false);
     });
+  }, []);
 
-    return {
-      records,
-      total: records.length,
-      fraudCount: records.filter(d => d.reason === 'Fraud').length,
-      reasonStats,
-      yearStats,
-      topCountries: Object.entries(countryMap).sort((a, b) => b[1] - a[1]).slice(0, 5),
-    };
-  }, [decodedJournal]);
+  const decodedJournal = decodeURIComponent(journal || '');
+  
+  const journalRecords = useMemo(() => 
+    records.filter(r => r.journal === decodedJournal),
+    [records, decodedJournal]
+  );
 
-  if (journalData.records.length === 0) {
+  const yearStats = useMemo(() => getYearStats(journalRecords), [journalRecords]);
+  const countryStats = useMemo(() => getCountryStats(journalRecords), [journalRecords]);
+
+  if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center pt-14">
+        <div className="w-12 h-12 border-4 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (journalRecords.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-14">
         <div className="text-center">
           <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">未找到数据</h2>
-          <p className="text-slate-500 mb-4">未找到 "{decodedJournal}" 的相关数据</p>
-          <Link to="/journals" className="text-teal-600 hover:text-teal-700">返回期刊列表</Link>
+          <h2 className="text-2xl font-semibold mb-2">未找到数据</h2>
+          <p className="text-[#86868b] mb-4">未找到 "{decodedJournal}" 的相关数据</p>
+          <Link to="/journals" className="text-[#0071e3] hover:underline">返回期刊列表</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Link to="/journals" className="text-slate-400 hover:text-slate-600">←</Link>
-          <h1 className="text-2xl font-bold text-slate-800">{decodedJournal}</h1>
+    <div className="pt-14">
+      <section className="hero-gradient py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <Link to="/journals" className="text-[#0071e3] text-[14px] mb-6 inline-block">
+            ← 返回期刊列表
+          </Link>
+          <h1 className="headline-xl mb-4">{decodedJournal}</h1>
+          <p className="text-[17px] text-[#86868b]">
+            共 {journalRecords.length.toLocaleString()} 篇撤稿记录
+          </p>
         </div>
+      </section>
 
-        <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <div className="text-3xl font-bold text-slate-800">{journalData.total}</div>
-            <div className="text-sm text-slate-500">撤稿总数</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <div className="text-3xl font-bold text-rose-600">{journalData.fraudCount}</div>
-            <div className="text-sm text-slate-500">欺诈/伪造</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <div className="text-3xl font-bold text-slate-800">{((journalData.fraudCount / journalData.total) * 100).toFixed(1)}%</div>
-            <div className="text-sm text-slate-500">欺诈率</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <div className="text-3xl font-bold text-slate-800">{journalData.topCountries.length}</div>
-            <div className="text-sm text-slate-500">涉及国家</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <h3 className="font-bold text-slate-800 mb-4">撤稿原因分布</h3>
-            <div className="space-y-3">
-              {Object.entries(journalData.reasonStats).map(([reason, count]) => (
-                <div key={reason} className="flex items-center gap-3">
-                  <div className="w-24 text-sm text-slate-600">{reason}</div>
-                  <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${
-                        reason === 'Fraud' ? 'bg-rose-500' :
-                        reason === 'Error' ? 'bg-amber-500' :
-                        reason === 'Plagiarism' ? 'bg-purple-500' :
-                        'bg-slate-400'
-                      }`}
-                      style={{ width: `${(count / journalData.total) * 100}%` }}
-                    />
-                  </div>
-                  <div className="w-12 text-sm text-right font-medium text-slate-700">{count}</div>
-                </div>
-              ))}
+      <section className="py-16 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-3 gap-6 mb-16">
+            <div className="bg-[#f5f5f7] rounded-2xl p-6 text-center">
+              <div className="text-4xl font-semibold">{journalRecords.length.toLocaleString()}</div>
+              <p className="text-[14px] text-[#86868b] mt-1">撤稿总数</p>
+            </div>
+            <div className="bg-[#f5f5f7] rounded-2xl p-6 text-center">
+              <div className="text-4xl font-semibold">{countryStats.length}</div>
+              <p className="text-[14px] text-[#86868b] mt-1">涉及国家</p>
+            </div>
+            <div className="bg-[#f5f5f7] rounded-2xl p-6 text-center">
+              <div className="text-4xl font-semibold">{yearStats[yearStats.length - 1]?.year || '-'}</div>
+              <p className="text-[14px] text-[#86868b] mt-1">最新年份</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <h3 className="font-bold text-slate-800 mb-4">涉及国家</h3>
-            <div className="space-y-2">
-              {journalData.topCountries.map(([country, count], i) => (
-                <Link
-                  key={country}
-                  to={`/country/${country}`}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors"
-                >
-                  <span className="w-6 text-sm text-slate-400">{i + 1}</span>
-                  <span className="flex-1 text-sm text-slate-700">{country}</span>
-                  <span className="text-sm font-bold text-teal-600">{count}</span>
-                </Link>
-              ))}
+          {/* Year Trend */}
+          <div className="mb-16">
+            <h2 className="headline-md mb-8">年度趋势</h2>
+            <div className="bg-[#f5f5f7] rounded-2xl p-8">
+              <div className="flex items-end gap-1 h-48">
+                {yearStats.map(({ year, count }) => {
+                  const maxCount = Math.max(...yearStats.map(y => y.count));
+                  return (
+                    <div key={year} className="flex-1 flex flex-col items-center gap-2">
+                      <div 
+                        className="w-full bg-[#0071e3] rounded-t-lg hover:bg-[#0077ED] transition-colors"
+                        style={{ height: `${(count / maxCount) * 160}px` }}
+                      />
+                      <span className="text-[10px] text-[#86868b]">{year}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Records */}
+          <div>
+            <h2 className="headline-md mb-8">最近撤稿</h2>
+            <div className="bg-[#f5f5f7] rounded-2xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-[#d2d2d7]">
+                    <th className="text-left p-4 text-[12px] font-semibold text-[#86868b] uppercase">标题</th>
+                    <th className="text-left p-4 text-[12px] font-semibold text-[#86868b] uppercase">机构</th>
+                    <th className="text-left p-4 text-[12px] font-semibold text-[#86868b] uppercase">撤稿原因</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {journalRecords.slice(0, 15).map(record => (
+                    <tr key={record.id} className="border-b border-[#e8e8ed] hover:bg-[#e8e8ed]">
+                      <td className="p-4 text-[14px] max-w-md truncate">{record.title}</td>
+                      <td className="p-4 text-[14px] text-[#86868b]">{record.institution}</td>
+                      <td className="p-4 text-[14px] text-[#86868b]">{record.reasons[0]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200">
-            <h3 className="font-bold text-slate-800">撤稿记录</h3>
-          </div>
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">标题</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">机构</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">原因</th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase">年份</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {journalData.records.map(record => (
-                <tr key={record.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3 text-sm text-slate-700 max-w-md truncate">{record.title}</td>
-                  <td className="px-5 py-3 text-sm text-slate-600">{record.institution}</td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      record.reason === 'Fraud' ? 'bg-rose-50 text-rose-600' :
-                      record.reason === 'Error' ? 'bg-amber-50 text-amber-600' :
-                      'bg-slate-100 text-slate-600'
-                    }`}>
-                      {record.reason}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-sm text-slate-600 font-mono">{record.year}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

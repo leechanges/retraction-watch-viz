@@ -1,75 +1,89 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MOCK_DATA } from '../data/mockData';
+import { loadData } from '../data/loader';
+import { getCountryStats, getYearStats } from '../data/parser';
+import type { RetractionRecord } from '../data/parser';
 
 export const CountriesPage: React.FC = () => {
-  const countryStats = useMemo(() => {
-    const map: Record<string, { count: number; fraud: number; records: typeof MOCK_DATA }> = {};
-    MOCK_DATA.forEach(d => {
-      if (!map[d.country]) map[d.country] = { count: 0, fraud: 0, records: [] };
-      map[d.country].count++;
-      map[d.country].records.push(d);
-      if (d.reason === 'Fraud') map[d.country].fraud++;
+  const [records, setRecords] = useState<RetractionRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData().then(data => {
+      setRecords(data);
+      setLoading(false);
     });
-    return Object.entries(map)
-      .map(([country, stats]) => ({ country, ...stats }))
-      .sort((a, b) => b.count - a.count);
   }, []);
 
-  return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">国家/地区分布</h1>
-          <p className="text-slate-500">查看全球各国家/地区的撤稿统计数据</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {countryStats.map(({ country, count, fraud, records }) => {
-            const flag = records[0]?.flag || '🌍';
-            return (
-              <Link
-                key={country}
-                to={`/country/${encodeURIComponent(country)}`}
-                className="bg-white rounded-xl border border-slate-200 p-5 card-hover cursor-pointer block"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{flag}</span>
-                    <div>
-                      <div className="font-bold text-slate-800">{country}</div>
-                      <div className="text-sm text-slate-500">{count} 篇撤稿</div>
-                    </div>
-                  </div>
-                  <div className="bg-rose-50 text-rose-600 px-2 py-1 rounded-md text-xs font-medium">
-                    {((fraud / count) * 100).toFixed(1)}% 欺诈
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">撤稿总数</span>
-                    <span className="font-medium text-slate-700">{count}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">欺诈/伪造</span>
-                    <span className="font-medium text-rose-600">{fraud}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">涉及期刊</span>
-                    <span className="font-medium text-slate-700">{new Set(records.map(r => r.journal)).size}</span>
-                  </div>
-                </div>
-                <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full"
-                    style={{ width: `${(count / countryStats[0].count) * 100}%` }}
-                  />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-14">
+        <div className="w-12 h-12 border-4 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  const countryStats = getCountryStats(records);
+  const yearStats = getYearStats(records);
+  const maxCount = countryStats[0]?.[1] || 1;
+
+  return (
+    <div className="pt-14">
+      {/* Hero */}
+      <section className="hero-gradient py-20 px-6">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="eyebrow mb-4">数据分析</p>
+          <h1 className="headline-xl mb-6">国家/地区分布</h1>
+          <p className="text-[17px] text-[#86868b] max-w-2xl mx-auto">
+            分析全球各国家和地区的学术撤稿情况，了解撤稿行为的地理分布
+          </p>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="py-16 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-3 gap-8 text-center mb-16">
+            <div>
+              <div className="stat-number text-[#1d1d1f]">{countryStats.length}</div>
+              <p className="text-[15px] text-[#86868b]">涉及国家</p>
+            </div>
+            <div>
+              <div className="stat-number text-[#1d1d1f]">{records.length.toLocaleString()}</div>
+              <p className="text-[15px] text-[#86868b]">总撤稿数</p>
+            </div>
+            <div>
+              <div className="stat-number text-[#0071e3]">{yearStats[yearStats.length - 1]?.year}</div>
+              <p className="text-[15px] text-[#86868b]">最新数据年</p>
+            </div>
+          </div>
+
+          {/* Country List */}
+          <div className="space-y-4">
+            {countryStats.slice(0, 30).map(([country, count]) => {
+              const percentage = (count / maxCount) * 100;
+              return (
+                <Link
+                  key={country}
+                  to={`/country/${encodeURIComponent(country)}`}
+                  className="block bg-[#f5f5f7] rounded-2xl p-6 hover:bg-[#e8e8ed] transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-[21px] font-semibold">{country}</div>
+                    <div className="text-[21px] font-semibold text-[#0071e3]">{count.toLocaleString()}</div>
+                  </div>
+                  <div className="h-2 bg-[#e8e8ed] rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#0071e3] rounded-full transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

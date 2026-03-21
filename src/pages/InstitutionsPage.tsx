@@ -1,68 +1,87 @@
-import React, { useMemo } from 'react';
-import { MOCK_DATA } from '../data/mockData';
+import React, { useEffect, useState } from 'react';
+import { loadData } from '../data/loader';
+import { getInstitutionStats } from '../data/parser';
 
 export const InstitutionsPage: React.FC = () => {
-  const institutionStats = useMemo(() => {
-    const map: Record<string, { count: number; fraud: number; records: typeof MOCK_DATA }> = {};
-    MOCK_DATA.forEach(d => {
-      if (!map[d.institution]) map[d.institution] = { count: 0, fraud: 0, records: [] };
-      map[d.institution].count++;
-      map[d.institution].records.push(d);
-      if (d.reason === 'Fraud') map[d.institution].fraud++;
+  const [records, setRecords] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData().then(data => {
+      setRecords(data);
+      setLoading(false);
     });
-    return Object.entries(map)
-      .map(([institution, stats]) => ({ institution, ...stats }))
-      .sort((a, b) => b.count - a.count);
   }, []);
 
-  return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">研究机构撤稿排行</h1>
-          <p className="text-slate-500">查看各研究机构的撤稿统计数据</p>
-        </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-14">
+        <div className="w-12 h-12 border-4 border-[#0071e3] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {institutionStats.map(({ institution, count, fraud }) => (
-            <div
-              key={institution}
-              className="bg-white rounded-xl border border-slate-200 p-5 card-hover"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-lg">🏛</div>
-                  <div>
-                    <div className="font-bold text-slate-800">{institution}</div>
-                    <div className="text-sm text-slate-500">{count} 篇撤稿</div>
+  const institutionStats = getInstitutionStats(records);
+  const maxCount = institutionStats[0]?.[1] || 1;
+
+  return (
+    <div className="pt-14">
+      <section className="hero-gradient py-20 px-6">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="eyebrow mb-4">数据分析</p>
+          <h1 className="headline-xl mb-6">研究机构</h1>
+          <p className="text-[17px] text-[#86868b] max-w-2xl mx-auto">
+            追踪全球研究机构的撤稿历史和趋势
+          </p>
+        </div>
+      </section>
+
+      <section className="py-16 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-3 gap-8 text-center mb-16">
+            <div>
+              <div className="stat-number text-[#1d1d1f]">{institutionStats.length}</div>
+              <p className="text-[15px] text-[#86868b]">研究机构</p>
+            </div>
+            <div>
+              <div className="stat-number text-[#1d1d1f]">{records.length.toLocaleString()}</div>
+              <p className="text-[15px] text-[#86868b]">总撤稿数</p>
+            </div>
+            <div>
+              <div className="stat-number text-[#0071e3]">{Math.round(records.length / institutionStats.length)}</div>
+              <p className="text-[15px] text-[#86868b]">每机构平均</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {institutionStats.slice(0, 50).map(([institution, count], i) => {
+              const percentage = (count / maxCount) * 100;
+              return (
+                <div
+                  key={institution}
+                  className="bg-[#f5f5f7] rounded-2xl p-6"
+                >
+                  <div className="flex items-center gap-6 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-[18px] font-semibold text-[#86868b]">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[17px] font-semibold">{institution}</div>
+                    </div>
+                    <div className="text-[28px] font-semibold text-[#0071e3]">{count}</div>
+                  </div>
+                  <div className="h-2 bg-[#e8e8ed] rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-[#0071e3] rounded-full"
+                      style={{ width: `${percentage}%` }}
+                    />
                   </div>
                 </div>
-                <div className={`px-2 py-1 rounded-md text-xs font-medium ${
-                  (fraud / count) > 0.3 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {((fraud / count) * 100).toFixed(0)}% 欺诈
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">撤稿总数</span>
-                  <span className="font-medium text-slate-700">{count}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">欺诈/伪造</span>
-                  <span className="font-medium text-rose-600">{fraud}</span>
-                </div>
-              </div>
-              <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full"
-                  style={{ width: `${(count / institutionStats[0].count) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

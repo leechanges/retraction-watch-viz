@@ -1,221 +1,231 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MOCK_DATA, getReasonStats, getYearStats } from '../data/mockData';
-
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subtitle: string;
-  icon: string;
-  color: string;
-  path: string;
-}
-
-const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, color, path }) => (
-  <Link 
-    to={path}
-    className="bg-white rounded-xl border border-slate-200 p-5 card-hover cursor-pointer block"
-  >
-    <div className="flex items-start justify-between mb-3">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${color}`}>
-        {icon}
-      </div>
-      <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
-    </div>
-    <div className="text-2xl font-bold text-slate-800 mb-1">{value}</div>
-    <div className="text-sm font-medium text-slate-700 mb-1">{title}</div>
-    <div className="text-xs text-slate-500">{subtitle}</div>
-  </Link>
-);
+import { loadData } from '../data/loader';
+import { getCountryStats, getJournalStats, getYearStats, getReasonStats } from '../data/parser';
+import type { RetractionRecord } from '../data/parser';
 
 export const HomePage: React.FC = () => {
-  const stats = useMemo(() => {
-    const total = MOCK_DATA.length;
-    const fraudCount = MOCK_DATA.filter(d => d.reason === 'Fraud').length;
-    const journals = [...new Set(MOCK_DATA.map(d => d.journal))].length;
-    const institutions = [...new Set(MOCK_DATA.map(d => d.institution))].length;
-    const countries = [...new Set(MOCK_DATA.map(d => d.country))].length;
-    const fields = [...new Set(MOCK_DATA.map(d => d.field))].length;
-    
-    const yearStats = getYearStats(MOCK_DATA);
-    const latestYear = Math.max(...Object.keys(yearStats).map(Number));
-    const latestYearCount = yearStats[latestYear] || 0;
+  const [records, setRecords] = useState<RetractionRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    return { total, fraudCount, journals, institutions, countries, fields, latestYear, latestYearCount };
-  }, []);
-
-  const countryStats = useMemo(() => {
-    const map: Record<string, number> = {};
-    MOCK_DATA.forEach(d => {
-      map[d.country] = (map[d.country] || 0) + 1;
+  useEffect(() => {
+    loadData().then(data => {
+      setRecords(data);
+      setLoading(false);
     });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, []);
 
-  const journalStats = useMemo(() => {
-    const map: Record<string, { count: number; fraud: number }> = {};
-    MOCK_DATA.forEach(d => {
-      if (!map[d.journal]) map[d.journal] = { count: 0, fraud: 0 };
-      map[d.journal].count++;
-      if (d.reason === 'Fraud') map[d.journal].fraud++;
-    });
-    return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 5);
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#0071e3] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#86868b]">加载数据中...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const reasonStats = useMemo(() => getReasonStats(MOCK_DATA), []);
+  const countryStats = getCountryStats(records);
+  const journalStats = getJournalStats(records);
+  const yearStats = getYearStats(records);
+  const reasonStats = getReasonStats(records);
+
+  const recentYear = yearStats[yearStats.length - 1]?.year || 2024;
+  const recentCount = yearStats[yearStats.length - 1]?.count || 0;
+  const totalCountries = countryStats.length;
+  const totalJournals = journalStats.length;
+  const topReason = reasonStats[0];
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Hero Section */}
-        <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-2xl p-8 mb-8 text-white">
-          <h1 className="text-2xl font-bold mb-2">学术撤稿智能监测平台</h1>
-          <p className="text-teal-100 text-sm mb-4">实时追踪全球学术撤稿动态，揭示科研诚信问题</p>
-          <div className="flex gap-8 text-sm">
+    <div className="pt-14">
+      {/* Hero Section */}
+      <section className="hero-gradient py-20 px-6">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="eyebrow mb-4">全球学术撤稿数据库</p>
+          <h1 className="headline-xl mb-6">
+            追踪学术撤稿<br />守护科研诚信
+          </h1>
+          <p className="text-[17px] text-[#86868b] max-w-2xl mx-auto mb-10">
+            基于 Retraction Watch 数据的智能分析平台，揭示全球学术撤稿趋势，
+            帮助研究机构和期刊出版社监测学术不端行为。
+          </p>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Link to="/countries" className="btn-primary">
+              开始探索
+            </Link>
+            <Link to="/reasons" className="btn-secondary">
+              了解撤稿原因
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <div className="text-teal-100">总撤稿数</div>
+              <div className="stat-number text-[#1d1d1f]">{records.length.toLocaleString()}</div>
+              <p className="text-[15px] text-[#86868b] mt-2">总撤稿记录</p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{stats.journals}</div>
-              <div className="text-teal-100">涉及期刊</div>
+              <div className="stat-number text-[#1d1d1f]">{totalCountries}</div>
+              <p className="text-[15px] text-[#86868b] mt-2">涉及国家</p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{stats.institutions}</div>
-              <div className="text-teal-100">研究机构</div>
+              <div className="stat-number text-[#1d1d1f]">{totalJournals}</div>
+              <p className="text-[15px] text-[#86868b] mt-2">学术期刊</p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{stats.countries}</div>
-              <div className="text-teal-100">国家/地区</div>
+              <div className="stat-number text-[#0071e3]">{recentYear}</div>
+              <p className="text-[15px] text-[#86868b] mt-2">最新数据年</p>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Module Cards */}
-        <h2 className="text-lg font-bold text-slate-800 mb-4">数据模块</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-          <StatCard
-            title="国家/地区"
-            value={stats.countries}
-            subtitle="全球撤稿分布"
-            icon="🌍"
-            color="bg-blue-50"
-            path="/countries"
-          />
-          <StatCard
-            title="期刊"
-            value={stats.journals}
-            subtitle="期刊撤稿排行"
-            icon="📚"
-            color="bg-purple-50"
-            path="/journals"
-          />
-          <StatCard
-            title="研究机构"
-            value={stats.institutions}
-            subtitle="机构撤稿统计"
-            icon="🏛"
-            color="bg-amber-50"
-            path="/institutions"
-          />
-          <StatCard
-            title="年份"
-            value={stats.latestYear}
-            subtitle={`${stats.latestYearCount}篇今年新撤稿`}
-            icon="📅"
-            color="bg-green-50"
-            path="/years"
-          />
-          <StatCard
-            title="学科领域"
-            value={stats.fields}
-            subtitle="跨学科分析"
-            icon="🔬"
-            color="bg-rose-50"
-            path="/fields"
-          />
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Country Distribution */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-800">国家/地区分布</h3>
-              <Link to="/countries" className="text-sm text-teal-600 hover:text-teal-700">查看全部 →</Link>
-            </div>
-            <div className="space-y-3">
-              {countryStats.map(([country, count], i) => (
-                <div key={country} className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-slate-500 w-6">{i + 1}</span>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-700">{country}</span>
-                      <span className="text-sm font-bold text-slate-800">{count}</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full"
-                        style={{ width: `${(count / stats.total) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Journal Distribution */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-800">期刊撤稿排行</h3>
-              <Link to="/journals" className="text-sm text-teal-600 hover:text-teal-700">查看全部 →</Link>
-            </div>
-            <div className="space-y-3">
-              {journalStats.map(([journal, { count, fraud }], i) => (
-                <div key={journal} className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-slate-500 w-6">{i + 1}</span>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-slate-700">{journal}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
-                          {((fraud / count) * 100).toFixed(0)}%欺诈
-                        </span>
-                        <span className="text-sm font-bold text-slate-800">{count}</span>
-                      </div>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-purple-400 to-purple-500 rounded-full"
-                        style={{ width: `${(count / stats.total) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Reason Stats */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-slate-800">撤稿原因分布</h3>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(reasonStats).map(([reason, count]) => (
-              <div key={reason} className="bg-slate-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-slate-800 mb-1">{count}</div>
-                <div className="text-sm text-slate-600">{reason}</div>
-                <div className="text-xs text-slate-400 mt-1">{((count / stats.total) * 100).toFixed(1)}%</div>
+      {/* Browse by Category */}
+      <section className="py-20 px-6 bg-[#f5f5f7]">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="headline-md text-center mb-4">按类别浏览</h2>
+          <p className="text-[17px] text-[#86868b] text-center mb-12">
+            从不同维度深入了解撤稿数据
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Link to="/countries" className="apple-card p-8 block">
+              <div className="text-4xl mb-4">🌍</div>
+              <h3 className="text-[21px] font-semibold mb-2">国家/地区</h3>
+              <p className="text-[14px] text-[#86868b] mb-4">
+                查看各国撤稿数量和趋势对比
+              </p>
+              <div className="text-[14px] text-[#0071e3]">
+                探索 {totalCountries} 个国家 →
               </div>
+            </Link>
+
+            <Link to="/journals" className="apple-card p-8 block">
+              <div className="text-4xl mb-4">📚</div>
+              <h3 className="text-[21px] font-semibold mb-2">学术期刊</h3>
+              <p className="text-[14px] text-[#86868b] mb-4">
+                分析各期刊的撤稿情况和诚信记录
+              </p>
+              <div className="text-[14px] text-[#0071e3]">
+                浏览 {totalJournals} 种期刊 →
+              </div>
+            </Link>
+
+            <Link to="/institutions" className="apple-card p-8 block">
+              <div className="text-4xl mb-4">🏛</div>
+              <h3 className="text-[21px] font-semibold mb-2">研究机构</h3>
+              <p className="text-[14px] text-[#86868b] mb-4">
+                追踪研究机构的撤稿历史
+              </p>
+              <div className="text-[14px] text-[#0071e3]">
+                查看全部机构 →
+              </div>
+            </Link>
+
+            <Link to="/years" className="apple-card p-8 block">
+              <div className="text-4xl mb-4">📅</div>
+              <h3 className="text-[21px] font-semibold mb-2">年份趋势</h3>
+              <p className="text-[14px] text-[#86868b] mb-4">
+                撤稿数量随时间的演变趋势
+              </p>
+              <div className="text-[14px] text-[#0071e3]">
+                {recentYear} 年 {recentCount} 篇新撤稿 →
+              </div>
+            </Link>
+
+            <Link to="/reasons" className="apple-card p-8 block">
+              <div className="text-4xl mb-4">⚠️</div>
+              <h3 className="text-[21px] font-semibold mb-2">撤稿原因</h3>
+              <p className="text-[14px] text-[#86868b] mb-4">
+                了解导致撤稿的主要原因分析
+              </p>
+              <div className="text-[14px] text-[#0071e3]">
+                最常见: {topReason?.[0]} →
+              </div>
+            </Link>
+
+            <Link to="/publishers" className="apple-card p-8 block">
+              <div className="text-4xl mb-4">🏢</div>
+              <h3 className="text-[21px] font-semibold mb-2">出版商</h3>
+              <p className="text-[14px] text-[#86868b] mb-4">
+                主要学术出版商的撤稿记录
+              </p>
+              <div className="text-[14px] text-[#0071e3]">
+                浏览出版商数据 →
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Top Countries */}
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-10">
+            <h2 className="headline-md">热门国家</h2>
+            <Link to="/countries" className="text-[15px] text-[#0071e3] hover:underline">
+              查看全部 →
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {countryStats.slice(0, 5).map(([country, count]) => (
+              <Link 
+                key={country}
+                to={`/country/${encodeURIComponent(country)}`}
+                className="bg-[#f5f5f7] rounded-2xl p-6 text-center hover:bg-[#e8e8ed] transition-colors"
+              >
+                <div className="text-3xl font-semibold text-[#1d1d1f]">{count.toLocaleString()}</div>
+                <div className="text-[14px] text-[#86868b] mt-1">{country}</div>
+              </Link>
             ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Top Journals */}
+      <section className="py-20 px-6 bg-[#f5f5f7]">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-10">
+            <h2 className="headline-md">热门期刊</h2>
+            <Link to="/journals" className="text-[15px] text-[#0071e3] hover:underline">
+              查看全部 →
+            </Link>
+          </div>
+          
+          <div className="space-y-4">
+            {journalStats.slice(0, 5).map(([journal, count], idx) => (
+              <Link 
+                key={journal}
+                to={`/journal/${encodeURIComponent(journal)}`}
+                className="bg-white rounded-2xl p-6 flex items-center gap-6 hover:shadow-lg transition-shadow"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[18px] font-semibold text-[#86868b]">
+                  {idx + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="text-[17px] font-semibold">{journal}</div>
+                </div>
+                <div className="text-[21px] font-semibold text-[#0071e3]">{count.toLocaleString()}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-6 bg-[#f5f5f7] border-t border-[#d2d2d7]">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="text-[12px] text-[#86868b]">
+            数据来源: Retraction Watch | 仅供研究和教育目的
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
