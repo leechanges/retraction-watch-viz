@@ -53,7 +53,7 @@ export const CountryDetailPage: React.FC = () => {
     <div className="pt-14">
       {/* Hero */}
       <section className="hero-gradient py-20 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <Link to="/countries" className="text-[#0071e3] text-[14px] mb-6 inline-block">
             ← 返回国家列表
           </Link>
@@ -66,7 +66,7 @@ export const CountryDetailPage: React.FC = () => {
 
       {/* Stats */}
       <section className="py-16 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-4 gap-6 mb-16">
             <div className="bg-[#f5f5f7] rounded-2xl p-6 text-center">
               <div className="text-4xl font-semibold">{countryRecords.length.toLocaleString()}</div>

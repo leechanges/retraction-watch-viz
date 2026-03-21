@@ -50,7 +50,7 @@ export const JournalDetailPage: React.FC = () => {
   return (
     <div className="pt-14">
       <section className="hero-gradient py-20 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <Link to="/journals" className="text-[#0071e3] text-[14px] mb-6 inline-block">
             ← 返回期刊列表
           </Link>
@@ -62,7 +62,7 @@ export const JournalDetailPage: React.FC = () => {
       </section>
 
       <section className="py-16 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-3 gap-6 mb-16">
             <div className="bg-[#f5f5f7] rounded-2xl p-6 text-center">
               <div className="text-4xl font-semibold">{journalRecords.length.toLocaleString()}</div>

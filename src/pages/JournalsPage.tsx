@@ -29,7 +29,7 @@ export const JournalsPage: React.FC = () => {
   return (
     <div className="pt-14">
       <section className="hero-gradient py-20 px-6">
-        <div className="max-w-5xl mx-auto text-center">
+        <div className="max-w-7xl mx-auto text-center">
           <p className="eyebrow mb-4">数据分析</p>
           <h1 className="headline-xl mb-6">学术期刊</h1>
           <p className="text-[17px] text-[#86868b] max-w-2xl mx-auto">
@@ -39,7 +39,7 @@ export const JournalsPage: React.FC = () => {
       </section>
 
       <section className="py-16 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-3 gap-8 text-center mb-16">
             <div>
               <div className="stat-number text-[#1d1d1f]">{journalStats.length}</div>

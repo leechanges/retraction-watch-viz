@@ -17,7 +17,7 @@ export const HomePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center pt-14">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-[#0071e3] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#86868b]">加载数据中...</p>
@@ -40,13 +40,13 @@ export const HomePage: React.FC = () => {
   return (
     <div className="pt-14">
       {/* Hero Section */}
-      <section className="hero-gradient py-20 px-6">
-        <div className="max-w-5xl mx-auto text-center">
+      <section className="hero-gradient py-24 px-6">
+        <div className="max-w-7xl mx-auto text-center">
           <p className="eyebrow mb-4">全球学术撤稿数据库</p>
           <h1 className="headline-xl mb-6">
             追踪学术撤稿<br />守护科研诚信
           </h1>
-          <p className="text-[17px] text-[#86868b] max-w-2xl mx-auto mb-10">
+          <p className="text-[17px] text-[#86868b] max-w-3xl mx-auto mb-10 leading-relaxed">
             基于 Retraction Watch 数据的智能分析平台，揭示全球学术撤稿趋势，
             帮助研究机构和期刊出版社监测学术不端行为。
           </p>
@@ -63,7 +63,7 @@ export const HomePage: React.FC = () => {
 
       {/* Stats Section */}
       <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="stat-number text-[#1d1d1f]">{records.length.toLocaleString()}</div>
@@ -87,7 +87,7 @@ export const HomePage: React.FC = () => {
 
       {/* Browse by Category */}
       <section className="py-20 px-6 bg-[#f5f5f7]">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <h2 className="headline-md text-center mb-4">按类别浏览</h2>
           <p className="text-[17px] text-[#86868b] text-center mb-12">
             从不同维度深入了解撤稿数据
@@ -165,7 +165,7 @@ export const HomePage: React.FC = () => {
 
       {/* Top Countries */}
       <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-10">
             <h2 className="headline-md">热门国家</h2>
             <Link to="/countries" className="text-[15px] text-[#0071e3] hover:underline">
@@ -190,7 +190,7 @@ export const HomePage: React.FC = () => {
 
       {/* Top Journals */}
       <section className="py-20 px-6 bg-[#f5f5f7]">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-10">
             <h2 className="headline-md">热门期刊</h2>
             <Link to="/journals" className="text-[15px] text-[#0071e3] hover:underline">
@@ -220,7 +220,7 @@ export const HomePage: React.FC = () => {
 
       {/* Footer */}
       <footer className="py-12 px-6 bg-[#f5f5f7] border-t border-[#d2d2d7]">
-        <div className="max-w-5xl mx-auto text-center">
+        <div className="max-w-7xl mx-auto text-center">
           <p className="text-[12px] text-[#86868b]">
             数据来源: Retraction Watch | 仅供研究和教育目的
           </p>
