@@ -164,14 +164,17 @@ export default function App() {
 
   // Load data from public CSV at runtime
   useEffect(() => {
-    fetch('/retraction_watch.csv')
-      .then(r => r.text())
+    fetch(`${import.meta.env.BASE_URL}retraction_watch.csv`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
       .then(text => {
         const data = parseCSV(text);
         setAllData(data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(err => {
+        console.error('Failed to load CSV:', err);
+        setLoading(false);
+      });
   }, []);
 
   // Filter options
