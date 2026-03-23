@@ -1,86 +1,84 @@
 import { create } from 'zustand';
-import type { RetractionRecord } from '../data/mockData';
-import { MOCK_DATA, getFilterOptions } from '../data/mockData';
+import type { RetractionRecord } from '../data/parser';
 
 interface FilterState {
-  years: number[];
-  reasons: string[];
-  countries: string[];
-  journals: string[];
-  institutions: string[];
-  fields: string[];
+  year: string;
+  nature: string;
+  country: string;
+  subject: string;
+  reason: string;
+  search: string;
+  page: number;
+  sortKey: keyof RetractionRecord | '';
+  sortDir: 'asc' | 'desc';
 }
 
-interface AppState {
-  data: RetractionRecord[];
+interface AppStore {
+  allData: RetractionRecord[];
   filteredData: RetractionRecord[];
+  loading: boolean;
   filters: FilterState;
-  filterOptions: FilterState;
-  selectedRecord: RetractionRecord | null;
-  activeTab: 'dashboard' | 'leaderboard' | 'database';
-  sidebarCollapsed: boolean;
-  
-  // Actions
-  setFilter: (key: keyof FilterState, values: string[] | number[]) => void;
-  clearFilters: () => void;
-  setSelectedRecord: (record: RetractionRecord | null) => void;
-  setActiveTab: (tab: 'dashboard' | 'leaderboard' | 'database') => void;
-  toggleSidebar: () => void;
-  applyFilters: () => void;
+  setAllData: (data: RetractionRecord[]) => void;
+  setLoading: (v: boolean) => void;
+  setFilter: (key: keyof FilterState, value: string) => void;
+  resetFilters: () => void;
+  setPage: (p: number) => void;
+  setSort: (key: keyof RetractionRecord | '', dir: 'asc' | 'desc') => void;
 }
 
-const filterData = (data: RetractionRecord[], filters: FilterState): RetractionRecord[] => {
-  return data.filter(d => {
-    if (filters.years.length > 0 && !filters.years.includes(d.year)) return false;
-    if (filters.reasons.length > 0 && !filters.reasons.includes(d.reason)) return false;
-    if (filters.countries.length > 0 && !filters.countries.includes(d.country)) return false;
-    if (filters.journals.length > 0 && !filters.journals.includes(d.journal)) return false;
-    if (filters.institutions.length > 0 && !filters.institutions.includes(d.institution)) return false;
-    if (filters.fields.length > 0 && !filters.fields.includes(d.field)) return false;
-    return true;
-  });
+const defaultFilters: FilterState = {
+  year: '全部',
+  nature: '全部',
+  country: '全部',
+  subject: '全部',
+  reason: '全部',
+  search: '',
+  page: 1,
+  sortKey: 'retractionDate',
+  sortDir: 'desc',
 };
 
-export const useAppStore = create<AppState>((set, get) => ({
-  data: MOCK_DATA,
-  filteredData: MOCK_DATA,
-  filters: {
-    years: [],
-    reasons: [],
-    countries: [],
-    journals: [],
-    institutions: [],
-    fields: [],
-  },
-  filterOptions: getFilterOptions(MOCK_DATA),
-  selectedRecord: null,
-  activeTab: 'dashboard',
-  sidebarCollapsed: false,
+function applyFilters(data: RetractionRecord[], filters: FilterState): RetractionRecord[] {
+  return data.filter(item => {
+    const year = item.retractionDate?.split('-')[0] || '';
+    if (filters.year !== '全部' && year !== filters.year) return false;
+    if (filters.nature !== '全部' && item.retractionNature !== filters.nature) return false;
+    if (filters.country !== '全部' && !item.country.includes(filters.country)) return false;
+    if (filters.subject !== '全部' && !item.subjects.some(s => s.includes(filters.subject))) return false;
+    if (filters.reason !== '全部' && !item.reasons.some(r => r.includes(filters.reason))) return false;
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      if (!item.title.toLowerCase().includes(q) &&
+          !item.authors.some((a: string) => a.toLowerCase().includes(q)) &&
+          !item.journal.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
 
-  setFilter: (key, values) => {
-    const { filters, data } = get();
-    const newFilters = { ...filters, [key]: values };
-    const filteredData = filterData(data, newFilters);
-    set({ filters: newFilters, filteredData });
+export const useAppStore = create<AppStore>((set, get) => ({
+  allData: [],
+  filteredData: [],
+  loading: true,
+  filters: { ...defaultFilters },
+  setAllData: (data) => {
+    const filtered = applyFilters(data, get().filters);
+    set({ allData: data, filteredData: filtered });
   },
-
-  clearFilters: () => {
-    const { data } = get();
-    set({
-      filters: { years: [], reasons: [], countries: [], journals: [], institutions: [], fields: [] },
-      filteredData: data,
-    });
+  setLoading: (v) => set({ loading: v }),
+  setFilter: (key, value) => {
+    const newFilters = { ...get().filters, [key]: value, page: key === 'page' ? get().filters.page : 1 };
+    const filtered = applyFilters(get().allData, newFilters);
+    set({ filters: newFilters, filteredData: filtered });
   },
-
-  setSelectedRecord: (record) => set({ selectedRecord: record }),
-  
-  setActiveTab: (tab) => set({ activeTab: tab }),
-  
-  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-  
-  applyFilters: () => {
-    const { filters, data } = get();
-    const filteredData = filterData(data, filters);
-    set({ filteredData });
+  resetFilters: () => {
+    const filtered = applyFilters(get().allData, defaultFilters);
+    set({ filters: { ...defaultFilters }, filteredData: filtered });
+  },
+  setPage: (p) => {
+    set({ filters: { ...get().filters, page: p } });
+  },
+  setSort: (key, dir) => {
+    set({ filters: { ...get().filters, sortKey: key, sortDir: dir } });
   },
 }));

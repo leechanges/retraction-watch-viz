@@ -8,12 +8,14 @@ import { InstitutionsPage } from './pages/InstitutionsPage';
 import { YearsPage } from './pages/YearsPage';
 import { ReasonsPage } from './pages/ReasonsPage';
 import { PublishersPage } from './pages/PublishersPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 function App() {
   return (
     <BrowserRouter basename="/retraction-watch-viz">
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/countries" element={<CountriesPage />} />
         <Route path="/country/:country" element={<CountryDetailPage />} />
         <Route path="/journals" element={<JournalsPage />} />

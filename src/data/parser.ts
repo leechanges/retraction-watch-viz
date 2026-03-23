@@ -149,6 +149,14 @@ export function getSubjectStats(records: RetractionRecord[]) {
   return Object.entries(map).sort((a, b) => b[1] - a[1]);
 }
 
+export function getNatureStats(records: RetractionRecord[]) {
+  const map: Record<string, number> = {};
+  records.forEach(r => {
+    if (r.retractionNature) map[r.retractionNature] = (map[r.retractionNature] || 0) + 1;
+  });
+  return Object.entries(map).sort((a, b) => b[1] - a[1]);
+}
+
 // Export data for testing
 export function getUniqueCountryCount(records: RetractionRecord[]): number {
   const countries = new Set<string>();
