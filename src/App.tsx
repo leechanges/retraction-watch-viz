@@ -30,6 +30,19 @@ interface RetractionRecord {
   Paywalled: string;
 }
 
+interface PrecomputedData {
+  total: number;
+  uniqueCountries: number;
+  uniqueJournals: number;
+  years: [string, number][];
+  countries: [string, number][];
+  subjects: [string, number][];
+  reasons: [string, number][];
+  journals: [string, number][];
+  institutions: [string, number][];
+  natures: [string, number][];
+}
+
 // ─── CSV Parser ───────────────────────────────────────────────────────────────
 
 function parseDate(dateStr: string): string {
@@ -46,7 +59,6 @@ function parseCSV(text: string): RetractionRecord[] {
   const lines = text.split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
   const records: RetractionRecord[] = [];
-
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim()) continue;
@@ -62,35 +74,21 @@ function parseCSV(text: string): RetractionRecord[] {
       }
     }
     values.push(line.slice(fieldStart).trim().replace(/^"|"$/g, ''));
-
     const get = (idx: number) => values[idx] || '';
     const id = parseInt(get(0));
     if (!id) continue;
-
     records.push({
       'Record ID': id,
-      DOI: get(1),
-      Title: get(2),
-      Subject: get(3),
-      Institution: get(4),
-      Journal: get(5),
-      Publisher: get(6),
-      Country: get(7),
-      Author: get(8),
+      DOI: get(1), Title: get(2), Subject: get(3), Institution: get(4),
+      Journal: get(5), Publisher: get(6), Country: get(7), Author: get(8),
       ArticleType: get(10),
       RetractionDate: parseDate(get(11)),
       OriginalPaperDate: parseDate(get(13)),
-      RetractionNature: get(16),
-      Reason: get(17),
-      Paywalled: get(18),
+      RetractionNature: get(16), Reason: get(17), Paywalled: get(18),
     });
   }
   return records;
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const COLORS = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -99,15 +97,9 @@ function splitMulti(val: string): string[] {
   return val.split(';').map(s => s.trim()).filter(Boolean);
 }
 
-function aggregate(data: RetractionRecord[], extractor: (r: RetractionRecord) => string | string[], limit = 10) {
-  const counts: Record<string, number> = {};
-  data.forEach(r => {
-    const keys = extractor(r);
-    (Array.isArray(keys) ? keys : [keys]).forEach(k => { if (k) counts[k] = (counts[k] || 0) + 1; });
-  });
-  return Object.entries(counts).map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count).slice(0, limit);
-}
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const COLORS = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
 // ─── Components ───────────────────────────────────────────────────────────────
 
@@ -155,9 +147,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
+const itemsPerPage = 20;
+
 export default function App() {
-  const [allData, setAllData] = useState<RetractionRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [precomputed, setPrecomputed] = useState<PrecomputedData | null>(null);
+  const [tableData, setTableData] = useState<RetractionRecord[]>([]);
+  const [tableLoading, setTableLoading] = useState(true);
   const [filters, setFilters] = useState({
     year: '全部', nature: '全部', country: '全部', subject: '全部', search: ''
   });
@@ -165,46 +160,39 @@ export default function App() {
   const [sortConfig, setSortConfig] = useState({ key: 'RetractionDate', dir: 'desc' as 'asc' | 'desc' });
   const [localSearch, setLocalSearch] = useState('');
 
-  const itemsPerPage = 20;
+  // Phase 1: Load precomputed chart data (fast, ~277KB JSON)
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}chart-data.json`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then((data: PrecomputedData) => setPrecomputed(data))
+      .catch(err => console.error('Failed to load chart data:', err));
+  }, []);
 
-  // Load data from public CSV at runtime
+  // Phase 2: Load full CSV in background for table filtering
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}retraction_watch.csv`)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
       .then(text => {
-        const data = parseCSV(text);
-        setAllData(data);
-        setLoading(false);
+        setTableData(parseCSV(text));
+        setTableLoading(false);
       })
       .catch(err => {
         console.error('Failed to load CSV:', err);
-        setLoading(false);
+        setTableLoading(false);
       });
   }, []);
 
-  // Filter options
-  const filterOptions = useMemo(() => {
-    const years = new Set<string>();
-    const countries = new Set<string>();
-    const subjects = new Set<string>();
-    const natures = new Set<string>();
-    allData.forEach(d => {
-      if (d.RetractionDate) years.add(d.RetractionDate.split('-')[0]);
-      splitMulti(d.Country).forEach(c => countries.add(c));
-      splitMulti(d.Subject).forEach(s => subjects.add(s));
-      if (d.RetractionNature) natures.add(d.RetractionNature);
-    });
-    return {
-      years: ['全部', ...Array.from(years).sort().reverse()],
-      countries: ['全部', ...Array.from(countries).sort()],
-      subjects: ['全部', ...Array.from(subjects).sort()],
-      natures: ['全部', ...Array.from(natures).sort()],
-    };
-  }, [allData]);
+  // Filter options from precomputed data
+  const filterOptions = useMemo(() => ({
+    years: ['全部', ...(precomputed ? precomputed.years.map(([y]) => y) : [])],
+    countries: ['全部', ...(precomputed ? precomputed.countries.map(([c]) => c) : [])],
+    subjects: ['全部', ...(precomputed ? precomputed.subjects.map(([s]) => s) : [])],
+    natures: ['全部', ...(precomputed ? precomputed.natures.map(([n]) => n) : [])],
+  }), [precomputed]);
 
-  // Processed & sorted data
+  // Table processed data (only when table CSV loaded)
   const processedData = useMemo(() => {
-    let result = allData.filter(item => {
+    let result = tableData.filter(item => {
       if (filters.year !== '全部' && !item.RetractionDate?.startsWith(filters.year)) return false;
       if (filters.nature !== '全部' && item.RetractionNature !== filters.nature) return false;
       if (filters.country !== '全部' && !splitMulti(item.Country).includes(filters.country)) return false;
@@ -227,23 +215,10 @@ export default function App() {
       });
     }
     return result;
-  }, [allData, filters, sortConfig, localSearch]);
+  }, [tableData, filters, sortConfig, localSearch]);
 
   const totalPages = Math.max(1, Math.ceil(processedData.length / itemsPerPage));
   const pageData = processedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  // Chart data
-  const trendData = useMemo(() =>
-    aggregate(processedData, r => r.RetractionDate?.split('-')[0])
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [processedData]);
-
-  const countryData = useMemo(() => aggregate(processedData, r => splitMulti(r.Country), 8), [processedData]);
-  const subjectRadar = useMemo(() => aggregate(processedData, r => splitMulti(r.Subject)), [processedData]);
-  const reasonData = useMemo(() =>
-    aggregate(processedData, r => splitMulti(r.Reason)), [processedData]);
-  const journalSource = useMemo(() => aggregate(processedData, r => r.Journal, 5), [processedData]);
-  const institutionSource = useMemo(() => aggregate(processedData, r => splitMulti(r.Institution), 5), [processedData]);
 
   const handleSort = (key: string) => {
     setSortConfig(prev => ({ key, dir: prev.key === key && prev.dir === 'desc' ? 'asc' : 'desc' }));
@@ -260,13 +235,39 @@ export default function App() {
     setCurrentPage(1);
   };
 
-  // KPI
-  const kpiTotal = processedData.length;
-  const kpiCountries = [...new Set(processedData.flatMap(r => splitMulti(r.Country)))].length;
-  const kpiJournals = [...new Set(processedData.map(r => r.Journal))].length;
-  const kpiRetraction = processedData.filter(r => r.RetractionNature === 'Retraction').length;
+  // KPIs from precomputed data
+  const kpiTotal = precomputed?.total ?? 0;
+  const kpiCountries = precomputed?.uniqueCountries ?? 0;
+  const kpiJournals = precomputed?.uniqueJournals ?? 0;
+  const kpiRetraction = precomputed?.natures.find(([n]) => n === 'Retraction')?.[1] ?? 0;
 
-  if (loading) {
+  // Chart data from precomputed
+  const trendData = useMemo(() =>
+    precomputed ? precomputed.years.map(([name, count]) => ({ name, count })) : [],
+    [precomputed]);
+
+  const countryData = useMemo(() =>
+    precomputed ? precomputed.countries.map(([name, count]) => ({ name, count })).slice(0, 8) : [],
+    [precomputed]);
+
+  const subjectRadar = useMemo(() =>
+    precomputed ? precomputed.subjects.slice(0, 8).map(([name, count]) => ({ name, count })) : [],
+    [precomputed]);
+
+  const reasonData = useMemo(() =>
+    precomputed ? precomputed.reasons.slice(0, 8).map(([name, count]) => ({ name, count })) : [],
+    [precomputed]);
+
+  const journalSource = useMemo(() =>
+    precomputed ? precomputed.journals.map(([name, count]) => ({ name, count })) : [],
+    [precomputed]);
+
+  const institutionSource = useMemo(() =>
+    precomputed ? precomputed.institutions.map(([name, count]) => ({ name, count })) : [],
+    [precomputed]);
+
+  // Show loading only if no precomputed data
+  if (!precomputed) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
@@ -311,14 +312,14 @@ export default function App() {
       {/* ── KPI Strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: '总撤稿数', value: kpiTotal.toLocaleString(), sub: `${allData.length.toLocaleString()} 条记录`, color: 'text-rose-500' },
-          { label: 'Retraction', value: kpiRetraction.toLocaleString(), sub: '撤稿', color: 'text-rose-400' },
-          { label: '涉及国家', value: kpiCountries, sub: '全球分布', color: 'text-blue-400' },
-          { label: '涉及期刊', value: kpiJournals, sub: '学术期刊', color: 'text-emerald-400' },
+          { label: '总撤稿数', value: kpiTotal.toLocaleString(), sub: 'Retraction Watch 官方数据', color: 'text-rose-500' },
+          { label: 'Retraction', value: kpiRetraction.toLocaleString(), sub: '篇撤稿', color: 'text-rose-400' },
+          { label: '涉及国家', value: kpiCountries.toLocaleString(), sub: '全球分布', color: 'text-blue-400' },
+          { label: '涉及期刊', value: kpiJournals.toLocaleString(), sub: '学术期刊', color: 'text-emerald-400' },
         ].map(({ label, value, sub, color }) => (
           <div key={label} className="bg-slate-900/60 border border-slate-800 rounded-xl px-5 py-4">
             <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{label}</div>
-            <div className={`text-2xl font-black mt-1 ${color}`}>{typeof value === 'number' ? value.toLocaleString() : value}</div>
+            <div className={`text-2xl font-black mt-1 ${color}`}>{value}</div>
             <div className="text-[10px] text-slate-600 mt-0.5">{sub}</div>
           </div>
         ))}
@@ -415,7 +416,7 @@ export default function App() {
                   <span className="text-xs font-mono text-rose-400">{item.count}</span>
                 </div>
                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500" style={{ width: `${(item.count / processedData.length) * 100}%` }} />
+                  <div className="h-full bg-rose-500" style={{ width: `${(item.count / precomputed.total) * 100}%` }} />
                 </div>
               </div>
             ))}
@@ -457,6 +458,9 @@ export default function App() {
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-rose-500" />
             <h2 className="text-lg font-bold text-white tracking-tight">明细数据记录底稿</h2>
+            {tableLoading && (
+              <span className="text-[10px] text-slate-500 ml-2 animate-pulse">(加载中...)</span>
+            )}
           </div>
           <div className="text-xs font-mono text-slate-500">
             SHOWING <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, processedData.length)}</span>
@@ -464,62 +468,68 @@ export default function App() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead className="bg-slate-950/50 text-slate-500 text-[10px] uppercase font-black border-b border-slate-800">
-              <tr>
-                <SortHeader label="论文标题" sortKey="Title" sortConfig={sortConfig} onSort={handleSort} className="min-w-[280px]" />
-                <th className="px-4 py-3">DOI / 信息</th>
-                <SortHeader label="期刊" sortKey="Journal" sortConfig={sortConfig} onSort={handleSort} className="min-w-[150px]" />
-                <SortHeader label="国家" sortKey="Country" sortConfig={sortConfig} onSort={handleSort} className="min-w-[100px]" />
-                <SortHeader label="撤稿日期" sortKey="RetractionDate" sortConfig={sortConfig} onSort={handleSort} className="min-w-[110px]" />
-                <SortHeader label="发表日期" sortKey="OriginalPaperDate" sortConfig={sortConfig} onSort={handleSort} className="min-w-[110px]" />
-                <th className="px-4 py-3">核心原因分析</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/50">
-              {pageData.map((row) => (
-                <tr key={row['Record ID']} className="hover:bg-rose-500/5 transition-all group">
-                  <td className="px-4 py-4">
-                    <div className="max-w-[260px]">
-                      <div className="text-slate-100 font-bold leading-snug line-clamp-2 group-hover:text-rose-400 transition-colors">{row.Title}</div>
-                      <div className="text-[10px] text-slate-600 mt-1 uppercase font-mono">{row.Author}</div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <Link className="w-3 h-3 text-rose-500/50" />
-                        <span className="font-mono">{row.DOI || '—'}</span>
-                      </div>
-                      <div className="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded w-fit text-slate-500 uppercase">{row.Institution}</div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-xs text-slate-400 italic">{row.Journal}</td>
-                  <td className="px-4 py-4 text-xs">
-                    <div className="flex items-center gap-1 text-slate-500">
-                      <MapPin className="w-3 h-3" />{row.Country}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="text-rose-500 font-bold font-mono text-xs">{row.RetractionDate}</div>
-                    <div className="text-[9px] text-slate-600 uppercase tracking-tighter mt-0.5">{row.RetractionNature}</div>
-                  </td>
-                  <td className="px-4 py-4 text-slate-600 font-mono text-xs">{row.OriginalPaperDate}</td>
-                  <td className="px-4 py-4">
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {row.Reason.split(';').filter(Boolean).map((r, i) => (
-                        <span key={i} className="bg-slate-800/80 border border-slate-700/50 px-1.5 py-0.5 rounded text-[9px] text-slate-400 leading-tight">
-                          {r.trim()}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
+        {tableLoading ? (
+          <div className="p-8 text-center text-slate-500 text-sm">
+            后台加载数据中，请稍候...
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-slate-950/50 text-slate-500 text-[10px] uppercase font-black border-b border-slate-800">
+                <tr>
+                  <SortHeader label="论文标题" sortKey="Title" sortConfig={sortConfig} onSort={handleSort} className="min-w-[280px]" />
+                  <th className="px-4 py-3">DOI / 信息</th>
+                  <SortHeader label="期刊" sortKey="Journal" sortConfig={sortConfig} onSort={handleSort} className="min-w-[150px]" />
+                  <SortHeader label="国家" sortKey="Country" sortConfig={sortConfig} onSort={handleSort} className="min-w-[100px]" />
+                  <SortHeader label="撤稿日期" sortKey="RetractionDate" sortConfig={sortConfig} onSort={handleSort} className="min-w-[110px]" />
+                  <SortHeader label="发表日期" sortKey="OriginalPaperDate" sortConfig={sortConfig} onSort={handleSort} className="min-w-[110px]" />
+                  <th className="px-4 py-3">核心原因分析</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-800/50">
+                {pageData.map((row) => (
+                  <tr key={row['Record ID']} className="hover:bg-rose-500/5 transition-all group">
+                    <td className="px-4 py-4">
+                      <div className="max-w-[260px]">
+                        <div className="text-slate-100 font-bold leading-snug line-clamp-2 group-hover:text-rose-400 transition-colors">{row.Title}</div>
+                        <div className="text-[10px] text-slate-600 mt-1 uppercase font-mono">{row.Author}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <Link className="w-3 h-3 text-rose-500/50" />
+                          <span className="font-mono">{row.DOI || '—'}</span>
+                        </div>
+                        <div className="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded w-fit text-slate-500 uppercase">{row.Institution}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-xs text-slate-400 italic">{row.Journal}</td>
+                    <td className="px-4 py-4 text-xs">
+                      <div className="flex items-center gap-1 text-slate-500">
+                        <MapPin className="w-3 h-3" />{row.Country}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-rose-500 font-bold font-mono text-xs">{row.RetractionDate}</div>
+                      <div className="text-[9px] text-slate-600 uppercase tracking-tighter mt-0.5">{row.RetractionNature}</div>
+                    </td>
+                    <td className="px-4 py-4 text-slate-600 font-mono text-xs">{row.OriginalPaperDate}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {row.Reason.split(';').filter(Boolean).map((r, i) => (
+                          <span key={i} className="bg-slate-800/80 border border-slate-700/50 px-1.5 py-0.5 rounded text-[9px] text-slate-400 leading-tight">
+                            {r.trim()}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="px-6 py-4 bg-slate-950/20 flex items-center justify-between">
@@ -550,7 +560,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="text-center py-8 text-xs text-slate-600 border-t border-slate-800/50 mt-8">
         数据来源: Retraction Watch (Crossref) | 仅供研究和教育目的
       </footer>
