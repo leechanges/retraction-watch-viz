@@ -94,6 +94,11 @@ const COLORS = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function splitMulti(val: string): string[] {
+  if (!val) return [];
+  return val.split(';').map(s => s.trim()).filter(Boolean);
+}
+
 function aggregate(data: RetractionRecord[], extractor: (r: RetractionRecord) => string | string[], limit = 10) {
   const counts: Record<string, number> = {};
   data.forEach(r => {
@@ -185,8 +190,8 @@ export default function App() {
     const natures = new Set<string>();
     allData.forEach(d => {
       if (d.RetractionDate) years.add(d.RetractionDate.split('-')[0]);
-      countries.add(d.Country);
-      if (d.Subject) d.Subject.split(';').forEach(s => subjects.add(s.trim()));
+      splitMulti(d.Country).forEach(c => countries.add(c));
+      splitMulti(d.Subject).forEach(s => subjects.add(s));
       if (d.RetractionNature) natures.add(d.RetractionNature);
     });
     return {
@@ -202,8 +207,8 @@ export default function App() {
     let result = allData.filter(item => {
       if (filters.year !== '全部' && !item.RetractionDate?.startsWith(filters.year)) return false;
       if (filters.nature !== '全部' && item.RetractionNature !== filters.nature) return false;
-      if (filters.country !== '全部' && !item.Country.includes(filters.country)) return false;
-      if (filters.subject !== '全部' && !item.Subject?.includes(filters.subject)) return false;
+      if (filters.country !== '全部' && !splitMulti(item.Country).includes(filters.country)) return false;
+      if (filters.subject !== '全部' && !splitMulti(item.Subject).some(s => s.includes(filters.subject))) return false;
       if (localSearch) {
         const q = localSearch.toLowerCase();
         if (!item.Title.toLowerCase().includes(q) &&
@@ -233,13 +238,12 @@ export default function App() {
       .sort((a, b) => a.name.localeCompare(b.name)),
     [processedData]);
 
-  const countryData = useMemo(() => aggregate(processedData, r => r.Country, 8), [processedData]);
-  const subjectRadar = useMemo(() => aggregate(processedData, r => r.Subject?.split(';')).slice(0, 8), [processedData]);
+  const countryData = useMemo(() => aggregate(processedData, r => splitMulti(r.Country), 8), [processedData]);
+  const subjectRadar = useMemo(() => aggregate(processedData, r => splitMulti(r.Subject)), [processedData]);
   const reasonData = useMemo(() =>
-    aggregate(processedData, r => r.Reason?.split(';').map(s => s.trim())).slice(0, 8),
-    [processedData]);
+    aggregate(processedData, r => splitMulti(r.Reason)), [processedData]);
   const journalSource = useMemo(() => aggregate(processedData, r => r.Journal, 5), [processedData]);
-  const institutionSource = useMemo(() => aggregate(processedData, r => r.Institution, 5), [processedData]);
+  const institutionSource = useMemo(() => aggregate(processedData, r => splitMulti(r.Institution), 5), [processedData]);
 
   const handleSort = (key: string) => {
     setSortConfig(prev => ({ key, dir: prev.key === key && prev.dir === 'desc' ? 'asc' : 'desc' }));
@@ -258,7 +262,7 @@ export default function App() {
 
   // KPI
   const kpiTotal = processedData.length;
-  const kpiCountries = [...new Set(processedData.map(r => r.Country))].length;
+  const kpiCountries = [...new Set(processedData.flatMap(r => splitMulti(r.Country)))].length;
   const kpiJournals = [...new Set(processedData.map(r => r.Journal))].length;
   const kpiRetraction = processedData.filter(r => r.RetractionNature === 'Retraction').length;
 
