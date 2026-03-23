@@ -20,19 +20,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
+      - name: Download latest Retraction Watch data from Crossref
+        run: |
+          curl -sL "https://gitlab.com/api/v4/projects/crossref%2Fretraction-watch-data/repository/files/retraction_watch.csv/raw?ref=main" \
+            -o public/retraction_watch.csv
+          LINES=$(wc -l < public/retraction_watch.csv)
+          echo "Downloaded $((LINES - 1)) retraction records from Crossref/Retraction Watch"
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build
         run: npm run build
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
