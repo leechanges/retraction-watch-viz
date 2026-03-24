@@ -138,7 +138,7 @@ export default function GlobalDashboard() {
         >
           <CountryChart
             data={precomputed}
-            onCountryClick={(c) => navigate(`/country/${encodeURIComponent(c)}`)}
+            onCountryClick={(c) => navigate(`#/country/${encodeURIComponent(c)}`)}
           />
         </ChartPanel>
 
