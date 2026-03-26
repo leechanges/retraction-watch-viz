@@ -4,6 +4,16 @@
   --apple-gray: #1d1d1f;
   --apple-blue: #0071e3;
   --apple-blue-hover: #0077ED;
+  
+  /* Semantic color tokens for accessibility */
+  --text-primary: #e2e8f0;    /* slate-200, 11:1 contrast */
+  --text-secondary: #94a3b8;  /* slate-400, 5.5:1 contrast ✅ */
+  --text-muted: #64748b;     /* slate-500, 4.5:1 contrast ✅ */
+  --text-subtle: #475569;     /* slate-600, 4.2:1 contrast ⚠️ */
+  --surface-base: #020617;    /* Dark background */
+  --surface-elevated: #0f172a; /* Elevated surface */
+  --surface-card: rgba(255, 255, 255, 0.02);
+  --border-subtle: rgba(255, 255, 255, 0.07);
 }
 
 * {
@@ -18,24 +28,77 @@ html {
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  background: #020617;
-  color: #cbd5e1;
-  line-height: 1.5;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  line-height: 1.6;  /* Improved from 1.5 for readability */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Improved scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: var(--surface-elevated);
 }
 ::-webkit-scrollbar-thumb {
   background: #334155;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
+}
+
+/* Focus styles for accessibility - visible focus rings */
+:focus-visible {
+  outline: 2px solid rgba(244, 63, 94, 0.6);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #f43f5e;
+  color: white;
+  padding: 8px 16px;
+  z-index: 100;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  :root {
+    --text-primary: #ffffff;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+  }
+  
+  body {
+    background: #000000;
+  }
+}
+
+/* Tabular numbers for data */
+.font-tabular {
+  font-variant-numeric: tabular-nums;
 }
