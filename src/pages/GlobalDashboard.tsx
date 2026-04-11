@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertTriangle, Globe, BookOpen, ShieldAlert, TrendingUp, Layers
 } from 'lucide-react';
@@ -8,6 +8,7 @@ import type { PrecomputedData, RetractionRecord, FilterState } from '../lib/type
 import Header from '../components/Header';
 import KpiCard from '../components/KpiCard';
 import FilterBar from '../components/FilterBar';
+import ExportBar from '../components/ExportBar';
 import ChartPanel from '../components/charts/ChartPanel';
 import TrendChart from '../components/charts/TrendChart';
 import CountryChart from '../components/charts/CountryChart';
@@ -15,9 +16,6 @@ import SubjectRadarChart from '../components/charts/SubjectRadarChart';
 import ReasonBarChart from '../components/charts/ReasonBarChart';
 import JournalChart from '../components/charts/JournalChart';
 import RetractionTable from '../components/RetractionTable';
-
-// Lazy load CountryPage for code splitting
-const CountryPage = lazy(() => import('./CountryPage'));
 
 // Skeleton loader for initial data load
 function DashboardSkeleton() {
@@ -61,17 +59,37 @@ export default function GlobalDashboard() {
   const [precomputed, setPrecomputed] = useState<PrecomputedData | null>(null);
   const [tableData, setTableData] = useState<RetractionRecord[]>([]);
   const [tableLoading, setTableLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<FilterState>({
-    year: '全部', nature: '全部', country: '全部', subject: '全部', search: ''
+    year: searchParams.get('year') || '全部',
+    nature: searchParams.get('nature') || '全部',
+    country: searchParams.get('country') || '全部',
+    subject: searchParams.get('subject') || '全部',
+    search: searchParams.get('q') || '',
   });
   const [sortConfig, setSortConfig] = useState({ key: 'RetractionDate', dir: 'desc' as 'asc' | 'desc' });
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchPrecomputed().then(setPrecomputed).catch(console.error);
     fetchCSV().then(data => { setTableData(data); setTableLoading(false); }).catch(() => setTableLoading(false));
   }, []);
+
+  // Sync filters to URL
+  const handleSetFilters = useCallback((updater: FilterState | ((prev: FilterState) => FilterState)) => {
+    setFilters(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      const params = new URLSearchParams();
+      if (next.year !== '全部') params.set('year', next.year);
+      if (next.nature !== '全部') params.set('nature', next.nature);
+      if (next.country !== '全部') params.set('country', next.country);
+      if (next.subject !== '全部') params.set('subject', next.subject);
+      if (next.search) params.set('q', next.search);
+      setSearchParams(params, { replace: true });
+      return next;
+    });
+  }, [setSearchParams]);
 
   const filterOptions = useMemo(() => ({
     years: ['全部', ...(precomputed?.years.map(([y]) => y) ?? [])],
@@ -81,7 +99,7 @@ export default function GlobalDashboard() {
   }), [precomputed]);
 
   const handleSearchSubmit = () => {
-    setFilters(f => ({ ...f, search: searchQuery }));
+    handleSetFilters(f => ({ ...f, search: searchQuery }));
   };
 
   const handleSort = (key: string) => {
@@ -95,9 +113,9 @@ export default function GlobalDashboard() {
   const kpiRetraction = precomputed.natures.find(([n]) => n === 'Retraction')?.[1] ?? 0;
 
   return (
-    <main 
+    <main
       id="main-content"
-      className="min-h-screen bg-[#020617] text-slate-300 p-5 lg:p-8"
+      className="min-h-screen bg-[#020617] text-slate-300 p-5 lg:p-8 ambient-bg"
       role="main"
     >
       <Header
@@ -106,9 +124,14 @@ export default function GlobalDashboard() {
         onSearchSubmit={handleSearchSubmit}
       />
 
+      {/* ── Export Bar ── */}
+      <div className="flex justify-end mb-6">
+        <ExportBar records={tableData} filters={filters} />
+      </div>
+
       {/* ── KPI Cards ── */}
       <section aria-label="关键指标">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 stagger-children">
           <KpiCard
             label="总撤稿数"
             value={precomputed.total}
@@ -142,17 +165,18 @@ export default function GlobalDashboard() {
 
       {/* ── Filter Bar ── */}
       <section aria-label="数据筛选">
-        <FilterBar filters={filters} onChange={setFilters} options={filterOptions} />
+        <FilterBar filters={filters} onChange={handleSetFilters} options={filterOptions} />
       </section>
 
       {/* ── Charts Grid ── */}
-      <section aria-label="数据可视化图表" className="mb-8">
+      <section aria-label="数据可视化图表" className="mb-8 stagger-children">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
           {/* Trend */}
           <ChartPanel
             title="时间趋势"
             icon={<TrendingUp className="w-3.5 h-3.5 text-rose-400" />}
             className="md:col-span-8 h-[300px]"
+            glow="rose"
           >
             <TrendChart data={precomputed} />
           </ChartPanel>
@@ -162,6 +186,7 @@ export default function GlobalDashboard() {
             title="学科分布"
             icon={<Layers className="w-3.5 h-3.5 text-blue-400" />}
             className="md:col-span-4 h-[300px]"
+            glow="blue"
           >
             <SubjectRadarChart subjects={precomputed.subjects} />
           </ChartPanel>
@@ -171,6 +196,7 @@ export default function GlobalDashboard() {
             title="国家分布 TOP 8"
             icon={<Globe className="w-3.5 h-3.5 text-rose-400" />}
             className="md:col-span-4 h-[280px]"
+            glow="rose"
             action={
               <span className="text-xs text-slate-500 font-mono">点击进入国家详情 →</span>
             }
@@ -186,6 +212,7 @@ export default function GlobalDashboard() {
             title="撤稿原因分析"
             icon={<ShieldAlert className="w-3.5 h-3.5 text-rose-400" />}
             className="md:col-span-4 h-[280px]"
+            glow="purple"
           >
             <ReasonBarChart reasons={precomputed.reasons} total={precomputed.total} />
           </ChartPanel>
@@ -195,6 +222,7 @@ export default function GlobalDashboard() {
             title="高频来源"
             icon={<BookOpen className="w-3.5 h-3.5 text-emerald-400" />}
             className="md:col-span-4 h-[280px]"
+            glow="emerald"
           >
             <div className="space-y-5 overflow-y-auto max-h-full pr-1">
               <JournalChart title="重灾期刊 TOP 5" icon="journal" items={precomputed.journals} />
