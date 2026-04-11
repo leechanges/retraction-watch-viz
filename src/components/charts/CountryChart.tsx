@@ -2,12 +2,15 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell
 } from 'recharts';
-import type { PrecomputedData } from '../../lib/types';
+
+interface ChartData {
+  countries: [string, number][];
+}
 
 const COLORS = ['#f43f5e', '#fb7185', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3ee', '#60a5fa'];
 
 interface CountryChartProps {
-  data: PrecomputedData;
+  data: ChartData;
   onCountryClick?: (country: string) => void;
 }
 
@@ -15,7 +18,7 @@ function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const { name, count } = payload[0].payload;
   return (
-    <div className="bg-slate-950/95 border border-white/10 p-3 rounded-xl shadow-2xl">
+    <div className="chart-tooltip">
       <div className="text-xs font-black text-white mb-1">{name}</div>
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].fill }} />
@@ -31,12 +34,12 @@ export default function CountryChart({ data, onCountryClick }: CountryChartProps
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+      <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
         <XAxis type="number" hide />
         <YAxis
           dataKey="name"
           type="category"
-          width={90}
+          width={88}
           axisLine={false}
           tickLine={false}
           tick={{ fontSize: 11, fill: '#94a3b8' }}
@@ -52,7 +55,7 @@ export default function CountryChart({ data, onCountryClick }: CountryChartProps
             <Cell
               key={i}
               fill={COLORS[i % COLORS.length]}
-              fillOpacity={0.85}
+              fillOpacity={0.9}
             />
           ))}
         </Bar>

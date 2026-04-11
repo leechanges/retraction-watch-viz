@@ -10,7 +10,7 @@ interface SubjectRadarChartProps {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-slate-950/95 border border-white/10 p-3 rounded-xl shadow-2xl">
+    <div className="chart-tooltip">
       <div className="text-xs font-black text-white mb-1">{label}</div>
       <div className="flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-blue-400" />
@@ -26,11 +26,11 @@ export default function SubjectRadarChart({ subjects }: SubjectRadarChartProps) 
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
-        <PolarGrid stroke="#334155" />
+      <RadarChart cx="50%" cy="50%" outerRadius="78%" data={data}>
+        <PolarGrid stroke="#1e293b" strokeWidth={1} />
         <PolarAngleAxis
           dataKey="name"
-          tick={{ fill: '#94a3b8', fontSize: 9 }}
+          tick={{ fill: '#94a3b8', fontSize: 10 }}
         />
         <Tooltip content={<CustomTooltip />} />
         <Radar
@@ -39,7 +39,7 @@ export default function SubjectRadarChart({ subjects }: SubjectRadarChartProps) 
           stroke="#60a5fa"
           strokeWidth={2}
           fill="#60a5fa"
-          fillOpacity={0.25}
+          fillOpacity={0.18}
         />
       </RadarChart>
     </ResponsiveContainer>

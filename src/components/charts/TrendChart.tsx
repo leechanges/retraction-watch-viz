@@ -2,10 +2,13 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import type { PrecomputedData } from '../../lib/types';
+
+interface TrendData {
+  years: [string, number][];
+}
 
 interface TrendChartProps {
-  data: PrecomputedData;
+  data: TrendData;
 }
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -35,11 +38,11 @@ export default function TrendChart({ data }: TrendChartProps) {
             <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="gradTrendLine" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.5} />
+            <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.6} />
             <stop offset="100%" stopColor="#fb7185" stopOpacity={1} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff06" vertical={false} />
         <XAxis
           dataKey="name"
           stroke="#475569"

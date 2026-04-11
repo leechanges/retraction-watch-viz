@@ -29,11 +29,14 @@ export default function SourceList({ title, icon: IconComponent, items, maxItems
                 {name || '—'}
               </span>
             </div>
-            <span className="text-[10px] px-2 py-0.5 bg-white/5 border border-white/8 rounded-lg text-slate-400 font-mono shrink-0">
+            <span className="text-[10px] px-2 py-0.5 bg-white/5 border border-white/8 rounded-lg text-emerald-400/80 font-mono shrink-0">
               {count.toLocaleString()}
             </span>
           </div>
         ))}
+        {displayItems.length === 0 && (
+          <p className="text-xs text-slate-600 italic">暂无数据</p>
+        )}
       </div>
     </div>
   );
